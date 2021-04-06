@@ -1,0 +1,167 @@
+Introdução a cli: 
+comandos da CLI:
+kubectl get nodes -o wide
+Kubectl get nodes -o name
+Kubectl get nodes -o json
+Kubectl get nodes -o yaml 
+kubectl get pods -o wide
+Kubectl get deployments -o wide
+Kubectl get replicaset -o wide
+Kubectl get rs -o wide
+Kubectl get ns -o wide
+
+namespace criar para fazer tudo nele 
+Kubectl create namespace suse-k8s
+
+Deployment descritivo
+kubectl run nginx --image=nginx:1.8 —restart=Always
+kubectl set image pod nginx nginx=nginx:1.9.1
+sudo kubectl create service nodeport nginx --tcp=80:80
+Kubectl delete pod nginx
+
+Começar a mexer com deployment
+kubectl apply -f https://k8s.io/examples/application/deployment.yaml
+kubectl scale deployment --replicas=3 nginx-deployment
+
+Descrever acessar e ver logs
+kubectl describe pod nginx
+kubectl get logs nginx
+kubectl exec -it nginx -- sh
+
+kubectl api-resources
+
+Exemplo de deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  namespace: suse-k8s
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  replicas: 2 
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80
+
+
+Exemplo de config map
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-html
+data:
+  enviroment: suse-k8s
+  index.html: |-
+    <html>
+    <head>
+    <title>Olá!</title>
+    </head>
+    <body>
+    <h1>Olá Classe!</h1>
+    <p>Este e um teste basico.</p>
+    </body>
+
+
+Colocar ao fim do arquivo de deployment para fazer a montagem do config map
+volumeMounts:
+        - name: nginx-html
+          mountPath: /usr/share/nginx/html/index.html
+          subPath: index.html
+      volumes:
+      - name: nginx-html
+        configMap:
+          name: nginx-html
+
+Instalação do K3S:
+Regras de firewall do k3s
+firewall-cmd --permanent --add-port=22/tcp
+firewall-cmd --permanent --add-port=80/tcp
+firewall-cmd --permanent --add-port=443/tcp
+firewall-cmd --permanent --add-port=2376/tcp
+firewall-cmd --permanent --add-port=2379/tcp
+firewall-cmd --permanent --add-port=2380/tcp
+firewall-cmd --permanent --add-port=6443/tcp
+firewall-cmd --permanent --add-port=8472/udp
+firewall-cmd --permanent --add-port=9099/tcp
+firewall-cmd --permanent --add-port=10250/tcp
+firewall-cmd --permanent --add-port=10254/tcp
+firewall-cmd --permanent --add-port=30000-32767/tcp
+firewall-cmd --permanent --add-port=30000-32767/udp
+firewall-cmd --reload
+
+Instalar o K3S
+sudo curl -sfL https://get.k3s.io | sh -
+cd /etc/rancher/k3s>
+sudo chown admin:users k3s.yaml
+
+habilitar o kubeclt (caso você queira instalar por conta propria)
+sudo curl -LO https://dl.k8s.io/release/v1.20.0/bin/linux/amd64/kubectl
+
+chmod +x kubectl
+mkdir -p ~/.local/bin/kubectl
+mv ./kubectl ~/.local/bin/kubectl
+# and then add ~/.local/bin/kubectl to $PATH
+
+
+Instalar OPENSUSE:
+Aonde fazer o download do opensuse leap:
+https://get.opensuse.org/leap
+lembretes importantes:
+Desabilitar o firewall ou habilitar as regras do firewall.
+Utilizar a verão LEAP e não a versão tumbleweed.
+versão recomendada até o momento é a versão 15.2
+
+Instalar o HELM
+sudo wget https://get.helm.sh/helm-v3.5.3-linux-amd64.tar.gz
+mv linux-amd64/helm /usr/local/bin/helm
+
+Instalar o Rancher no K3S
+Adicionar repositorio HELM
+helm repo add rancher-stable https://releases.rancher.com/server-charts/stable
+
+Criar namespace para o deployment
+kubectl create namespace cattle-system
+
+
+Instalar o Cert Manager
+# Install the CustomResourceDefinition resources separately
+kubectl apply --validate=false -f https://github.com/jetstack/cert-manager/releases/download/v1.0.4/cert-manager.crds.yaml
+
+# **Important:**
+# If you are running Kubernetes v1.15 or below, you
+# will need to add the `--validate=false` flag to your
+# kubectl apply command, or else you will receive a
+# validation error relating to the
+# x-kubernetes-preserve-unknown-fields field in
+# cert-manager’s CustomResourceDefinition resources.
+# This is a benign error and occurs due to the way kubectl
+# performs resource validation.
+
+# Create the namespace for cert-manager
+kubectl create namespace cert-manager
+
+# Add the Jetstack Helm repository
+helm repo add jetstack https://charts.jetstack.io
+
+# Update your local Helm chart repository cache
+helm repo update
+
+# Install the cert-manager Helm chart
+helm install \
+  cert-manager jetstack/cert-manager \
+  --namespace cert-manager \
+  --version v1.0.4
+
+Instalar o Rancher
+helm install rancher rancher-stable/rancher \
+  --namespace cattle-system \
+  --set hostname=rancherlab.vinicius.infra.lab
